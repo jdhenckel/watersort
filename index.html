@@ -6,17 +6,32 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>HTML 5 Boilerplate</title>
     <link rel="stylesheet" href="style.css">
+    <script src="index.js"></script>
   </head>
   <body>
+   <div id="tubes">
+      <div>
+        <div>a</div>
+        <div>b</div>
+        <div>c</div>
+      </div>
+      <div>
+        <div>d</div>
+        <div>e</div>
+        <div>f</div>
+      </div>
+    </div>
+    <button onclick="test_render()">test render</button>
+    <button onclick="on_rewind()">⏮</button>
+    <button onclick="on_backstep()">⏴</button>
 
-    Hello World.  This is water sort.
-
-    <p>
-        open console and type "test_solver(1)"
-    </p>
-
-
-
-	<script src="index.js"></script>
+    <button onclick="on_step()">⏯</button>
+    <button onclick="on_play()">⏵</button>
+    <button onclick="on_ff()">⏭</button>
+    <hr>
+    <input id="setup" value="37">
+    <button onclick="on_setup()">setup</button>
+    <hr>
+    <div id="stack"></div>
   </body>
 </html>

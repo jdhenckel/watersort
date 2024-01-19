@@ -1,0 +1,54 @@
+
+body, button, input {
+  font: 34px arial;
+  background-color: #eee;
+}
+
+button {
+  border-radius: .3em;
+  background-color: #ddf;
+}
+
+#tubes { 
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+#tubes > div {
+  margin: 0.6em 0.5em;
+  width: 1em;
+}
+#tubes > div > div {
+  width: 100%;
+  height: 1em;
+  border-style: solid;
+  border-color: black;
+  border-width: 0 2px;
+}
+#tubes > div > div:last-child {
+  border-radius: 0 0 1em 1em;
+  border-bottom-width: 2px;
+}
+
+.lip {
+  max-height: 0.3em;
+}
+
+.R { background-color: red;}
+.G { background-color: green;}
+.B { background-color: blue;}
+.r { background-color: #ea5e7b;}
+.g { background-color: #62d67c;}
+.b { background-color: #55a3e5;}
+.P { background-color: purple;}
+.a { background-color: #c9fb18;}
+.A { background-color: #78960e;}
+.p { background-color: #ed2bed;}
+.E { background-color: #636465;}
+.Y { background-color: #e88c42;}
+.y { background-color: yellow;}
+.C { background-color: #00bfbf;}
+.c { background-color: #87ffff;}
+.e { background-color: #bbb;}
+
+

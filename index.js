@@ -1,116 +1,303 @@
 
+// GLOBAL DATA
+
+var game = null;
+var stack = [];
+
 
 // NOTE:  The "state" is a list of strings.   Because of recursion, it is very
 // important the state is immutable, i.e do not change the list itself, instead
-// use slice to construct a new state list.  The FIRST element of the state
+// use slice to letruct a new state list.  The FIRST element of the state
 // is the last move, i.e. '1,2' meaning pour from tube 1 to 2.  The content of each
 // tube is string of single character color codes, top to bottom.
 //
-//  For example state = ['1,2', 'R', 'GBR', 'BBB', 'GBGG'] is four tubes
+//  For example tubes = ['R', 'GRR', 'BBRB', 'GBGG'] is four tubes
 
 class State {
-    constructor (tubes, m=[], s=0) {
+    constructor (tubes, v=[], m=4, msg='') {
         this.tubes = tubes;
-        this.moves = m;
-        this.score = s;
+        this.moves = v;
+        this.m = m;        // height of each tube (max water)
+        this.msg = msg;
     }
 
-    not_solved(m=0) {
-        let n = 0;
-        for (let t of this.tubes)
-            if (top_length(t) < Math.max(m,t.length)) ++n;
-        return n;    
+    // Return how many layers of different color in the i tube
+    layers(i) {
+        let tube = this.tubes[i];
+        if (tube.length == 0) return 0;
+        let count = 1;
+        for (let i = 1; i < tube.length; i++)
+            if (tube[i] != tube[i-1]) ++count;
+        return count;
+    }
+
+    // Return how thick is the top layer in the i tube
+    top(i) {
+        let tube = this.tubes[i];
+        let count = 0;
+        for (let i = 0; i < tube.length; i++)
+            if (tube[i] == tube[0]) ++count;
+            else break;
+        return count;
+    }
+
+    // Return how much room is left in tube
+    gap(i) {
+        return this.m - this.tubes[i].length;
+    }
+
+    depth(i) {
+        return this.tubes[i].length;
+    }
+
+    is_pure(i) {
+        return this.top(i) == this.tubes[i].length;
+    }
+
+    is_full(i) {
+        return this.tubes[i].length == this.m;
+    }
+
+    is_done(i) {
+        return this.top(i) == this.m;
+    }
+
+    is_all_done() {
+        for (let i in this.tubes) 
+            if (!this.is_done(i) && !this.is_empty(i)) 
+                return false;
+        return true;
+    }
+
+    is_empty(i) {
+        return this.tubes[i].length == 0;
+    }
+
+    find_empty() {
+        for (let j=0; j<this.tubes.length; ++j) 
+            if (this.is_empty(j)) return j;
+        return -1;
     }
 
 
-    num_empty() {
-        let n = 0;
-        for (let t of this.tubes)
-            if (t.length == 0) ++n;
-        return n;    
-    }
-
-    compute_score(m=0) {
-        let n = this.tubes.length;
-        let done = n - this.not_solved(m);
-        let pure = n - this.not_solved();
-        let empty = this.num_empty();
-        this.score = done + pure + empty;
-    }
-}
-
-// Return the length of the top color, e.g. 'AAB' returns 2.
-function top_length(tube) {
-    for (var i=0; i<tube.length && tube[i]==tube[0];) ++i;
-    return i;
-}
-
-
-// Pour tube a into b. return [] if error, else new [a,b]
-function pour(a,b,m) {
-    if (a.length > 0 && (b.length==0 || a[0] == b[0])) {
-        let i = top_length(a);
-        if (i < m && i + b.length <= m) 
-            return [a.slice(i),a.slice(0,i)+b];
-    }
-    return [];
-}
-
-// Given a state, find all descendents, i.e. all states that are the result of a valid action.
-// If no actions are valid, return empty list.  m is the tube size.
-function get_choices(state, m=4) {
-    let tub = state.tubes
-    let n = tub.length;
-    let result = [];
-    //let ei = 0;
-    for (let i=0; i<n; ++i) {
-        let ej = 0
-        for (let j=i+1; j<n; ++j) {
-            let [a1,b1] = pour(tub[i], tub[j], m);
-            if (a1!=null && (tub[j].length || !ej)) {
-                let t = new State(tub.slice(0,i).concat(a1, tub.slice(i+1,j), b1, tub.slice(j+1)),
-                    state.moves.concat(i+'-'+j));
-                result.push(t);
-                if (!tub[j].length) ej = 1;
-            }
-            let [b2,a2] = pour(tub[j], tub[i], m);
-            if (a2!=null && (a1 || b2)) {
-                let t = new State(tub.slice(0,i).concat(a2, tub.slice(i+1,j), b2, tub.slice(j+1)),
-                    state.moves.concat(j+'-'+i));
-                result.push(t);
+    // Return list of tube indicies with same top color as i-th
+    // when a='top' only return those that can pour the entire top into i.
+    // Note if i is empty, then a is the desired top color
+    find(i, a='any') {
+        let c = this.is_empty(i) ? a : this.tubes[i][0];
+        let result = [];
+        for (let j=0; j<this.tubes.length; ++j) {
+            if (i!=j && this.tubes[j].startsWith(c)) {
+                let t = this.top(j);
+                if (t != this.m && (a=='any' || t <= this.gap(i)))
+                    result.push(j);
             }
         }
+        return result;
     }
-    return result;
+
+
+    sumtop(indices) {
+        let s = 0;
+        for (let i of indices) s += this.top(i);
+        return s;
+    }
+
+    // Returns a copy of the state
+    copy(msg='') {
+        return new State(Array.from(this.tubes), this.moves, this.m, msg);
+    }
+
+
+    //Returns a new state, or null if not valid (check size, not color)
+    pour(i,j,msg='') {
+        let n = Math.min(this.top(i), this.gap(j));
+        if (n < 1) return null;
+        let t = this.copy(msg);
+        t.tubes[j] = t.tubes[i].substring(0,n) + t.tubes[j];
+        t.tubes[i] = t.tubes[i].substring(n);
+        t.moves += (',' + i + '-' + j);
+        return t;
+    }
+
+    //Returns a new state, or null if not valid (check size, not color)
+    pour_many(ii,j,msg='') {
+        let r = this.copy(msg);
+        for (let i of ii) {
+            let n = Math.min(r.top(i), r.gap(j));
+            if (n < 1) break;
+            r.tubes[j] = r.tubes[i].substring(0,n) + r.tubes[j];
+            r.tubes[i] = r.tubes[i].substring(n);
+            r.moves += (',' + i + '-' + j);
+        }
+        return r;
+    }
+
+
+
+    render() {
+        let result='';
+        for (let t of this.tubes) {
+            result += `<div><div class="lip"></div>`;
+            for (let i=0; i<this.m-t.length; ++i)
+                result += `<div class="gap"></div>`;
+            for (let i of t)
+                result += `<div class="${i}"></div>`;
+            result += `</div>`;
+        }
+        return result;
+    }
+
 }
 
-// INsert states into the todo, keep them ordered DESCENDING by score
-function add_states(todo, states, m=0) {
-    for (let s of states) {
-        s.compute_score(m);
-        for (var i=0; i<todo.length && todo[i].score > s.score; ) ++i;
-        todo.splice(i,0,s);
+// Given a state, find The best moves.  There are really only three kinds of moves
+// 1. pour into a PURE tube (all one color). branch=1
+// 2. pour from one mixed tube to another. Give preference to lowest branch factor,
+//     i.e from full to only one option.
+// 3. pour into an EMPTY tube. Sort options according to max-sum-top.
+//
+function get_choices(s) {
+    let n = s.tubes.length;
+
+    // 1. pour any matching tube into a pure tube that isn't full
+    for (let i=0; i<n; ++i) {
+        if (!s.is_pure(i) || s.is_full(i)) 
+            continue;
+        let t = s.find(i);
+        if (t.length) 
+            return [s.pour(t[0],i,'into pure')];
     }
+
+    let into = [];
+    for (let i=0; i<n; ++i)
+        if (!s.is_full(i) && s.layers(i) > 1) 
+            into.push(i);
+    into.sort(j => -(s.layers(j)*100 + s.depth(j)*10 + s.top(j)));
+
+    // 2a. pour mixed to mixed, simple only
+    for (let i of into) {
+        let t = s.find(i,'top');
+        if (t.length==1) {
+            return [s.pour(t[0],i,'simple')];
+        }
+    }
+
+    // 2b. pour mixed to mixed, complex case
+    for (let i of into) {
+        let t = s.find(i);
+        if (t.length < 2) 
+            continue;
+        // Having determined that at least two other tubes can pour into i, 
+        // compute all permutations of pouring between the tubes.  And sort
+        // them in order to get pure tubes as soon as possible.
+        t.push(i);
+        t.sort(j => s.layers(j)*100 + s.depth(j)*10 + s.top(j));
+        let a = t.flatMap(i => t.map(j => i!=j ? s.pour(i,j,'complex') : null));
+        return a.filter(x => x != null);
+    }
+
+    // 3. last resort: pour into an empty tube
+    let i = s.find_empty();
+    if (i >= 0) {
+        let k = '';
+        let family = [];
+        for (let j=0; j<n; ++j) {
+            if (i==j || s.is_empty(j) || s.is_done(j)) 
+                continue;
+            let c = s.tubes[j][0];
+            if (k.indexOf(c) + 1) 
+                continue;
+            k += c;
+            let t = s.find(i,c);
+            if (t.length == 1 && s.is_pure(j)) 
+                continue;
+            family.push(t);
+        }
+        //family.sort(t => -s.sumtop(t));
+        return family.map(t => s.pour_many(t,i,'into empty'));
+    }
+
+    return [];    // Dead End == no more choices.
+}
+
+
+function draw_tubes(data) {
+    let e = document.getElementById('tubes');
+    e.innerHTML = data;
+}
+
+function draw_stack(msg,stack) {
+    let e = document.getElementById('stack');
+    e.innerHTML = `${msg?msg+'<br>':''}${stack.length}<br>
+            ${stack.map(s => s.moves + ' <br> ')}`;
+}
+
+function on_rewind() {
+    console.log('begin on_rewind');
+}
+
+function on_backstep() {
+    console.log('begin on_backstep');
+}
+
+function on_step() {
+    console.log('begin on_step');
+    let m='';
+    game = stack.shift();
+    let b = get_choices(game);
+    if (b.length==0) m = game.is_all_done()? 'Success!' :'Dead End!';
+    stack = b.concat(stack);
+    draw_tubes(game.render());
+    draw_stack(m,stack);
+}
+
+function on_play() {
+    console.log('begin on_play');
+}
+
+function on_ff() {
+    console.log('begin on_ff');
+}
+
+function on_setup() {
+    console.log('begin on_setup');
+    let data = document.getElementById('setup').value;
+    let tubes = null;
+    if (data==37) tubes = ['ABgE','ggPE','rREY','APbb','bRBA','RYBR','EbPr','AYYr','BPrg','','']
+    else tubes = data.split(',').map(s => s.trim());
+    let tlen = tubes.map(t => t.length);
+    game = new State(tubes, '', Math.max(4,...tlen));
+    stack = get_choices(game);
+    draw_tubes(game.render());
+    draw_stack(stack);
+}
+
+
+
+function test_render() {
+    tubes = ['BGGR','GGRB','BBR','GR'];
+    s = new State(tubes);
+    draw_tubes(s.render());
 }
 
 
 // Return a sequence of actions that will solve the water sort.  
-function solve(state, m=4) {
-    let todo = [state];
-    while (todo.length > 0) {
-        var a = todo.shift();         // BEST FIRST SEARCH
-        if (a.not_solved(m) == 0) break;
-        let b = get_choices(a, m);
-        add_states(todo, b, m);
-        console.log(todo.length,todo[0].moves.length);
-    }
-    return a;
-}
+// function solve(state) {
+//     let todo = [state];
+//     while (todo.length > 0) {
+//         var a = todo.shift();         // BEST FIRST SEARCH
+//         //if (a.not_solved() == 0) break;
+//         let b = get_choices(a);
+//         todo.unshift(...b);
+//         console.log(todo.length,todo[0].msg,todo[0].moves);
+//     }
+//     return a;
+// }
 
 
 
 function test_choices() {
-    let a = new State(['ABC','AA','ACC','BBC','B']);
+    let a = new State(['ABC','AB','ACC','BC','BCA']);
     console.log('=======================');
     console.log(a.moves,a.tubes);
     console.log('=======================\nfrom:',a.moves,a.tubes);
@@ -124,18 +311,23 @@ function test_choices() {
 }
 
 
-function test_solver(i) {
-    let a = ['ABC','AA','ACC','BBC','B'];
-    if (i==13) 
-        a = ['rgpb','lggo','roGp','lbrg','lGpl','Gbop','obrG','',''];  // #13
-    if (i==37) 
-        a = ['abgG','ggpG','PrGo','apll','lrba','robr','GlpP','aooP','bpPg','','']; 
-    console.log('=========\nTry to solve: ', a);
-    let b = solve(new State(a));
-    console.log('Solved: ',b.moves,b.tubes);
-}
+// function test_solver(i) {
+//     let a = ['ABC','AA','ACC','BBC','B'];
+//     if (i==13) 
+//         a = ['rgpb','lggo','roGp','lbrg','lGpl','Gbop','obrG','',''];  // #13
+//     if (i==99) 
+//         a = ['GRR','GGB','GRR','BBB'];  // VERY TRICKY
+//     if (i==37) 
+//         a = ['abgG','ggpG','PrGo','apll','lrba','robr','GlpP','aooP','bpPg','','']; 
+//     console.log('=========\nTry to solve: ', a);
+//     let b = solve(new State(a));
+//     console.log('Solved: ',b.moves,b.tubes);
+// }
 
-test_solver(13);
-//test_choices();
+
+
+//test_solver(1);
+test_choices();
+//test_render();
 
 
