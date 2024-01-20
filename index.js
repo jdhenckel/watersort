@@ -3,7 +3,7 @@
 
 var game = null;
 var stack = [];
-
+var intervalID = 0;
 
 // NOTE:  The "state" is a list of strings.   Because of recursion, it is very
 // important the state is immutable, i.e do not change the list itself, instead
@@ -133,6 +133,28 @@ class State {
         return r;
     }
 
+    // Alter the tubes by a random REVERSE pour (reset all moves)
+    unpour() {
+        let s = [];
+        for (let i in this.tubes) {
+            if (this.is_empty(i)) continue;
+            for (let j in this.tubes) {
+                if (i!=j && !this.is_full(j) && (this.is_full(i) || 
+                    this.is_empty(j) || this.tubes[j][0]!=this.tubes[i][0]))
+                    s.push([i,j]);
+            }
+        }
+        s = s[Math.trunc(Math.random()*s.length)]
+        let i = s[0]; 
+        let j = s[1];
+        let n = this.top(i);
+        if (this.is_empty(j) || this.tubes[j][0]!=this.tubes[i][0])
+            n = Math.trunc(this.top(i) * Math.random()) + 1;
+        n = Math.min(n, this.gap(j));
+        this.tubes[j] = this.tubes[i].substring(0,n) + this.tubes[j];
+        this.tubes[i] = this.tubes[i].substring(n);
+        //console.log('UNPOUR',i,j);
+    }
 
 
     render() {
@@ -228,8 +250,54 @@ function draw_tubes(data) {
 
 function draw_stack(msg,stack) {
     let e = document.getElementById('stack');
+    if (!stack) {
+        e.innerHTML = 'null';
+        return;
+    }
     e.innerHTML = `${msg?msg+'<br>':''}${stack.length}<br>
             ${stack.map(s => s.moves + ' <br> ')}`;
+}
+
+function stop() {
+    if (intervalID > 0) {
+        clearInterval(intervalID);
+        console.log('stop done',intervalID);
+        intervalID = 0;
+    }
+}
+
+function start(x=500) {
+    stop();
+    intervalID = setInterval(step, x);
+}
+
+function step() {    
+    let m='';
+    game = stack.shift();
+    let b = get_choices(game);
+    if (b.length==0) {
+        m = 'Dead End!';
+        if (game.is_all_done()) {
+            m = 'Success! <hr> Moves: ' + game.moves.substring(1) + '<hr>';
+        }
+        stop();
+    }
+    stack = b.concat(stack);
+    draw_tubes(game.render());
+    draw_stack(m,stack);
+}
+
+
+function on_scramble() {
+    console.log('begin on_scramble');
+    stop();
+    for (let i=0; i<1000; ++i)
+        game.unpour();
+    game.moves = '';
+    game.msg = 'scrambled';
+    stack = get_choices(game);
+    draw_tubes(game.render());
+    draw_stack(m,stack);
 }
 
 function on_rewind() {
@@ -242,21 +310,18 @@ function on_backstep() {
 
 function on_step() {
     console.log('begin on_step');
-    let m='';
-    game = stack.shift();
-    let b = get_choices(game);
-    if (b.length==0) m = game.is_all_done()? 'Success!' :'Dead End!';
-    stack = b.concat(stack);
-    draw_tubes(game.render());
-    draw_stack(m,stack);
+    if (intervalID > 0) stop();
+    else step();
 }
 
 function on_play() {
     console.log('begin on_play');
+    start(300);
 }
 
 function on_ff() {
     console.log('begin on_ff');
+    start(50);
 }
 
 function on_setup() {
