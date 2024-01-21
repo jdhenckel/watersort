@@ -2,6 +2,7 @@
 // GLOBAL DATA
 
 var game = null;
+var s0 = null;
 var stack = [];
 var intervalID = 0;
 
@@ -19,6 +20,10 @@ class State {
         this.moves = v;
         this.m = m;        // height of each tube (max water)
         this.msg = msg;
+    }
+
+    clone() {
+        return new State([...this.tubes],this.moves,this.m);
     }
 
     // Return how many layers of different color in the i tube
@@ -108,6 +113,13 @@ class State {
         return new State(Array.from(this.tubes), this.moves, this.m, msg);
     }
 
+    // returns number of tubes with same top color as i
+    match(i) {
+        let n = 0;
+        for (let j in this.tubes) if (i!=j && 
+            !this.is_empty(j) && this.tubes[i][0]==this.tubes[j][0]) ++n;
+        return n;
+    }
 
     //Returns a new state, or null if not valid (check size, not color)
     pour(i,j,msg='') {
@@ -153,7 +165,7 @@ class State {
         n = Math.min(n, this.gap(j));
         this.tubes[j] = this.tubes[i].substring(0,n) + this.tubes[j];
         this.tubes[i] = this.tubes[i].substring(n);
-        //console.log('UNPOUR',i,j);
+        console.log('UNPOUR',i,j);
     }
 
 
@@ -199,7 +211,7 @@ function get_choices(s) {
     // 2a. pour mixed to mixed, simple only
     for (let i of into) {
         let t = s.find(i,'top');
-        if (t.length==1) {
+        if (t.length==1 && s.match(i)==1) {
             return [s.pour(t[0],i,'simple')];
         }
     }
@@ -273,14 +285,14 @@ function start(x=500) {
 
 function step() {    
     let m='';
-    game = stack.shift();
+    if (stack) game = stack.shift();
     let b = get_choices(game);
     if (b.length==0) {
         m = 'Dead End!';
         if (game.is_all_done()) {
             m = 'Success! <hr> Moves: ' + game.moves.substring(1) + '<hr>';
+            stop();
         }
-        stop();
     }
     stack = b.concat(stack);
     draw_tubes(game.render());
@@ -291,17 +303,21 @@ function step() {
 function on_scramble() {
     console.log('begin on_scramble');
     stop();
-    for (let i=0; i<1000; ++i)
+    for (let i=0; i<30; ++i)
         game.unpour();
     game.moves = '';
     game.msg = 'scrambled';
     stack = get_choices(game);
     draw_tubes(game.render());
-    draw_stack(m,stack);
+    draw_stack(game.msg,stack);
 }
 
 function on_rewind() {
     console.log('begin on_rewind');
+    game = s0.clone();
+    stack = get_choices(game);
+    draw_tubes(game.render());
+    draw_stack(game.msg,stack);
 }
 
 function on_backstep() {
@@ -324,17 +340,29 @@ function on_ff() {
     start(50);
 }
 
+function on_touch(i) {
+    console.log('begin touch',i);
+}
+
 function on_setup() {
     console.log('begin on_setup');
     let data = document.getElementById('setup').value;
     let tubes = null;
     if (data==37) tubes = ['ABgE','ggPE','rREY','APbb','bRBA','RYBR','EbPr','AYYr','BPrg','','']
+    else if (data==2) tubes = ['GRR','GGB','GRR','BBB','R'];
+    else if (data==3) tubes = ['rgg', 'b', 'rrgg', 'rbbb'];
+    else if (data==4) tubes = ['rrrr','bbbb','gggg','EEEE','',''];
+    else if (data==5) tubes = ['rrrr','bbbb','gggg','EEEE','BBBB','',''];
+    else if (data==6) tubes = ['rrrr','bbbb','gggg','EEEE','BBBB','AAAA','',''];
+    else if (data==39) tubes = ['grbB','rEYR','YBBb','RbYr','YgBr','RbgE','EREg','',''];
+    else if (data==40) tubes = ['YErA','PbgY','gBAr','Ebbr','BrAB','RBPR','EPgb','ARgE','PYRY','',''];
     else tubes = data.split(',').map(s => s.trim());
     let tlen = tubes.map(t => t.length);
     game = new State(tubes, '', Math.max(4,...tlen));
+    s0 = game.clone();
     stack = get_choices(game);
     draw_tubes(game.render());
-    draw_stack(stack);
+    draw_stack(game.msg,stack);
 }
 
 

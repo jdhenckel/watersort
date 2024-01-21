@@ -8,7 +8,9 @@ button {
   border-radius: .3em;
   background-color: #ddf;
 }
-
+input {
+  width: 7em;
+}
 #tubes { 
   display: flex;
   flex-direction: row;
