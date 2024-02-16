@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>HTML 5 Boilerplate</title>
+    <title>Water Sort solver</title>
     <link rel="stylesheet" href="style.css">
     <script src="index.js"></script>
   </head>
   <body>
+    <h3>WaterSort Solver</h3>
    <div id="tubes">
       <div>
         <div>a</div>
@@ -21,15 +22,15 @@
         <div>f</div>
       </div>
     </div>
-    <button onclick="on_scramble()">⇄</button>
-    <button onclick="on_rewind()">⏮</button>
-    <button onclick="on_backstep()">⏴</button>
+    <button onclick="on_scramble()" title="scramble">⇄</button>
+    <button onclick="on_rewind()" title="rewind">⏮</button>
+    <!-- <button onclick="on_backstep()" title="backstep">⏴</button> -->
 
-    <button onclick="on_step()">⏯</button>
-    <button onclick="on_play()">⏵</button>
-    <button onclick="on_ff()">⏭</button>
+    <button onclick="on_step()" title="step">⏯</button>
+    <button onclick="on_play()" title="solve">⏵</button>
+    <button onclick="on_ff()" title="fast solve">⏭</button>
     <hr>
-    <input id="setup" onfocus="show_colors()" value="37">
+    <input id="setup" onfocus="show_colors()">
     <button onclick="on_setup()">setup</button>
     <hr>
     <div id="stack"></div>

@@ -263,8 +263,7 @@ function draw_tubes(data) {
 function draw_stack(msg,stack) {
     let e = document.getElementById('stack');
     if (!stack) {
-        e.innerHTML = 'null';
-        return;
+        stack = [];
     }
     e.innerHTML = `${msg?msg+'<br>':''}${stack.length}<br>
             ${stack.map(s => s.moves + ' <br> ')}`;
@@ -346,8 +345,10 @@ function on_touch(i) {
 
 function on_setup() {
     console.log('begin on_setup');
+    stop();
     let data = document.getElementById('setup').value;
     let tubes = null;
+    // BELOW ARE TEST CASES, just type the number in setup
     if (data==37) tubes = ['ABgE','ggPE','rREY','APbb','bRBA','RYBR','EbPr','AYYr','BPrg','','']
     else if (data==2) tubes = ['GRR','GGB','GRR','BBB','R'];
     else if (data==3) tubes = ['rgg', 'b', 'rrgg', 'rbbb'];
@@ -356,6 +357,7 @@ function on_setup() {
     else if (data==6) tubes = ['rrrr','bbbb','gggg','EEEE','BBBB','AAAA','',''];
     else if (data==39) tubes = ['grbB','rEYR','YBBb','RbYr','YgBr','RbgE','EREg','',''];
     else if (data==40) tubes = ['YErA','PbgY','gBAr','Ebbr','BrAB','RBPR','EPgb','ARgE','PYRY','',''];
+    else if (data==51) tubes = ['gYrB','bgRr','brbR','gEBY','RYEY','RBEE','Bgrb','',''];
     else tubes = data.split(',').map(s => s.trim());
     let tlen = tubes.map(t => t.length);
     game = new State(tubes, '', Math.max(4,...tlen));
@@ -365,7 +367,33 @@ function on_setup() {
     draw_stack(game.msg,stack);
 }
 
-
+function show_colors() {
+    msg = `Enter tubes top to bottom, left to right, separated by comma, 
+    such as RrBG,EgrR,... 
+    Add an extra comma at the end for each empty tube.
+    <br>Colors:
+    <br>
+    <span class="R"> &nbsp; R &nbsp; </span>
+    <span class="G"> &nbsp; G &nbsp; </span>
+    <span class="B"> &nbsp; B &nbsp; </span>
+    <span class="Y"> &nbsp; Y &nbsp; </span>
+    <span class="C"> &nbsp; C &nbsp; </span>
+    <span class="P"> &nbsp; P &nbsp; </span>
+    <span class="A"> &nbsp; A &nbsp; </span>
+    <span class="E"> &nbsp; E &nbsp; </span>
+    <br>
+    <span class="r"> &nbsp; r &nbsp; </span>
+    <span class="g"> &nbsp; g &nbsp; </span>
+    <span class="b"> &nbsp; b &nbsp; </span>
+    <span class="y"> &nbsp; y &nbsp; </span>
+    <span class="c"> &nbsp; c &nbsp; </span>
+    <span class="p"> &nbsp; p &nbsp; </span>
+    <span class="a"> &nbsp; a &nbsp; </span>
+    <span class="e"> &nbsp; e &nbsp; </span>
+    <p>Or some number, like 37 or 51 to run a testcase.`;
+    draw_stack(msg);
+    return true;
+}
 
 function test_render() {
     tubes = ['BGGR','GGRB','BBR','GR'];
@@ -420,7 +448,8 @@ function test_choices() {
 
 
 //test_solver(1);
-test_choices();
+//test_choices();
 //test_render();
+setTimeout(() => on_setup(37),1);
 
 
